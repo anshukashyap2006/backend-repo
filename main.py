@@ -6,7 +6,7 @@ from router.users_router import router
 from fastapi.middleware.cors import CORSMiddleware
 
 from fastapi.responses import JSONResponse
-from fastapi.exceptions import RequestValidationError
+from core.apierror import ApiError
 
 
 # context manager helps to safely manage resources like database connection before starting and after cleanup without writing a class and also avoiding try/finally blocks
@@ -39,15 +39,17 @@ app.add_middleware(
 )
 
 # Creating a global error handling middleware to ensure every single error sent back to the frontend has the exact same JSON structure (e.g., always returning { success: false, message: "...", statusCode: 400 }).
-@app.exception_handler(RequestValidationError)
-async def validation_exception_handler(req: Request,exc: RequestValidationError):
+# This acts as a global net—if any route anywhere in the app raises an ApiError (which is our custom made class), this function intercepts it and formats the JSON response.
+@app.exception_handler(ApiError)
+async def api_error_handler(request: Request,exc: ApiError):
     return JSONResponse(
+        status_code=exc.status_code,
         content={
-            "success": False,
-            "message": "Invalid input data",
-            "errors": exc.errors() # Shows exactly which field failed
+            "success": exc.success,
+            "message": exc.message,
+            "errors": exc.error,
+            "data" : exc.data
         },
-        status_code=422
     )
 
 
