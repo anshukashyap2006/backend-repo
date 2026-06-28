@@ -1,9 +1,14 @@
-from fastapi import FastAPI
+from fastapi import FastAPI,Request,Response
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from db.connect import connect_db
 from router.users_router import router
 from fastapi.middleware.cors import CORSMiddleware
+
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
+
+
 # context manager helps to safely manage resources like database connection before starting and after cleanup without writing a class and also avoiding try/finally blocks
 
 # load variables from .env
@@ -32,6 +37,19 @@ app.add_middleware(
     allow_methods=["*"], # Allows GET, POST, PUT, DELETE, etc.
     allow_headers=["*"], 
 )
+
+# Creating a global error handling middleware to ensure every single error sent back to the frontend has the exact same JSON structure (e.g., always returning { success: false, message: "...", statusCode: 400 }).
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(req: Request,exc: RequestValidationError):
+    return JSONResponse(
+        content={
+            "success": False,
+            "message": "Invalid input data",
+            "errors": exc.errors() # Shows exactly which field failed
+        },
+        status_code=422
+    )
+
 
 @app.get("/")
 def root():
