@@ -3,6 +3,7 @@ from datetime import datetime,timezone
 from pydantic import EmailStr,Field
 from typing import Annotated,Optional
 from models.video import Video
+from core.security import hash_password,verify_password
 
 class User(Document):
     username: Annotated[str,Indexed(unique=True),Field(...)]
@@ -20,6 +21,16 @@ class User(Document):
     def update_timestamp(self):
         print("Updating the 'updated_at' timestamp...")
         self.updated_at = datetime.now(timezone.utc)
+
+    @before_event(Insert,Replace)
+    async def hash_password(self):
+        # We only want to hash it if it's not already a bcrypt hash
+        # (bcrypt hashes typically start with $2b$ or $2a$)
+        if not self.password.startswith("$2"):
+            self.password = hash_password(self.password)
+
+            
+
 
     class Settings:
         name = "users"
