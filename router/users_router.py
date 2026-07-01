@@ -1,9 +1,12 @@
-from fastapi import APIRouter, Response, HTTPException, status
+from fastapi import APIRouter, Response, HTTPException, status,UploadFile,File,Depends
 from pydantic import BaseModel,EmailStr,Field
 from models.users import User
 from src.core.auth import create_access_token, create_refresh_token
 from src.core.security import verify_password,hash_password
 from src.core.apiresponse import ApiResponse 
+from fastapi.responses import JSONResponse
+import os,shutil
+from utils.cloudinary import upload_on_cloudinary
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -53,5 +56,33 @@ async def login_user(login_data : LoginRequest,response:Response):
     }
 
 
+@router.post('/register/avatar')
+async def upload_avatar(avatar: UploadFile = File(...)):
+    if not avatar:
+        raise HTTPException(status_code=400, detail="File must be an image")
+    
+    # temp storage
+    temp_folder = "public/temp"
+    os.makedirs(temp_folder,exist_ok=True)
 
+    file_location = f"{temp_folder}/{avatar.filename}"
+    # Upload 
+    try:
+        with open(file_location,"wb+") as file_obj:
+            shutil.copyfileobj(avatar.file,file_obj)
+    except Exception as e:
+        raise HTTPException(status_code=500,detail="Could not upload File")
+    finally:
+        avatar.file.close()
 
+    cloudinary_response = upload_on_cloudinary(file_location)
+
+    if not cloudinary_response:
+        raise HTTPException(status_code=500, detail="Error uploading file on cloudinary")
+
+    # 3. Return the secure URL provided by Cloudinary
+    return {
+        "message": "Avatar uploaded successfully!", 
+        "cloudinary_url": cloudinary_response.get("secure_url"),
+        "original_filename": avatar.filename
+    }
