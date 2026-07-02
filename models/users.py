@@ -2,8 +2,12 @@ from beanie import Document,Indexed,Link,Insert,Replace,SaveChanges,before_event
 from datetime import datetime,timezone
 from pydantic import EmailStr,Field
 from typing import Annotated,Optional
-from models.video import Video
 from core.security import hash_password,verify_password
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from models.video import Video  
+
 
 class User(Document):
     username: Annotated[str,Indexed(unique=True),Field(...)]
@@ -11,7 +15,7 @@ class User(Document):
     full_name : Annotated[str,Indexed(unique=False),Field(...)]
     avatar: str = Field(...)
     cover_image : Optional[str]
-    watch_history : Link[Video]
+    watch_history : Link["Video"]
     password : Annotated[str,Field(...,description="Password is required")]
     refresh_token : str
     created_at : datetime = Field(default_factory=lambda:datetime.now(timezone.utc))

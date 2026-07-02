@@ -2,7 +2,7 @@ from fastapi import FastAPI,Request,Response
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from db.connect import connect_db
-from router.users_router import router
+from router.users_router import user_router
 from fastapi.middleware.cors import CORSMiddleware
 
 from fastapi.responses import JSONResponse
@@ -28,7 +28,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan, title="YT_PROJECT_BACKEND")
 
-app.include_router(router)
+app.include_router(user_router)
 
 app.add_middleware(
     CORSMiddleware,

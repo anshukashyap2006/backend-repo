@@ -1,24 +1,27 @@
 from fastapi import APIRouter, Response, HTTPException, status,UploadFile,File,Depends
 from pydantic import BaseModel,EmailStr,Field
 from models.users import User
-from src.core.auth import create_access_token, create_refresh_token
-from src.core.security import verify_password,hash_password
-from src.core.apiresponse import ApiResponse 
+from core.auth import create_access_token, create_refresh_token
+from core.security import verify_password,hash_password
+from core.apiresponse import ApiResponse 
 from fastapi.responses import JSONResponse
 import os,shutil
 from utils.cloudinary import upload_on_cloudinary
+from services.user_services import *
 
-router = APIRouter(prefix="/users", tags=["Users"])
-
+user_router = APIRouter(prefix="/api/v1/users", tags=["Users"])
+# it is a standard practice to write routes like this 
+# http:localhost:8000/api/v1/users
 
 class LoginRequest(BaseModel):
+    username : str = Field(...,min_length=3,max_length=30)
     email : EmailStr = Field(...)
     password : str
 
-@router.post('/login')
+@user_router.post('/login')
 async def login_user(login_data : LoginRequest,response:Response):
     # find user in DB
-    user = await User.find_one(login_data.email==User.email)
+    user = await User.find_one(login_data.username==User.username)
     if not user:
         raise HTTPException(status_code=404,detail="User not found")
     
@@ -56,7 +59,7 @@ async def login_user(login_data : LoginRequest,response:Response):
     }
 
 
-@router.post('/register/avatar')
+@user_router.post('/register/avatar')
 async def upload_avatar(avatar: UploadFile = File(...)):
     if not avatar:
         raise HTTPException(status_code=400, detail="File must be an image")
@@ -86,3 +89,16 @@ async def upload_avatar(avatar: UploadFile = File(...)):
         "cloudinary_url": cloudinary_response.get("secure_url"),
         "original_filename": avatar.filename
     }
+
+
+# @user_router.post('/register')
+# async def register_user(user: User):
+#     new_user = await register_user_service(user=user)
+#     return {
+#         "success" : True,
+#         "message" : "User Registered successfully",
+#         "data" : {
+#             "username" : new_user.username,
+#             "email" : new_user.email
+#         }
+#     }

@@ -2,10 +2,11 @@ import os
 from motor.motor_asyncio import AsyncIOMotorClient
 from beanie import init_beanie
 from models.users import User
+from models.video import Video
 from constants import DB_NAME
 
 async def connect_db():
-    mongo_uri = os.getenv("MONGO_URI")
+    mongo_uri = os.getenv("MONGODB_URI")
     
     try:
         # 1. Initialize the Motor Client (The Engine)
@@ -19,7 +20,7 @@ async def connect_db():
         db = client[DB_NAME]
         
         # 4. Initialize Beanie (The ODM)
-        await init_beanie(database=db, document_models=[User])
+        await init_beanie(database=db, document_models=[User,Video])
         
         print(f"⚙️ MongoDB connection to '{DB_NAME}' successful!")
         
