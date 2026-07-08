@@ -13,11 +13,11 @@ class User(Document):
     username: Annotated[str,Indexed(unique=True),Field(...)]
     email: Annotated[EmailStr,Indexed(unique = True),Field(...)]
     full_name : Annotated[str,Indexed(unique=False),Field(...)]
-    avatar: str = Field(...)
-    cover_image : Optional[str]
-    watch_history : Link["Video"]
+    avatar: Optional[str] = Field(default=None)
+    cover_image : Optional[str] = None
+    watch_history: list[Link["Video"]] = Field(default_factory=list)
     password : Annotated[str,Field(...,description="Password is required")]
-    refresh_token : str
+    refresh_token : str = Field(default="")
     created_at : datetime = Field(default_factory=lambda:datetime.now(timezone.utc))
     updated_at : datetime = Field(default_factory=lambda:datetime.now(timezone.utc))
 

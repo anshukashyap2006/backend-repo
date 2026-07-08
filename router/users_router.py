@@ -1,13 +1,14 @@
-from fastapi import APIRouter, Response, HTTPException, status,UploadFile,File,Depends
-from pydantic import BaseModel,EmailStr,Field
+from fastapi import APIRouter, Response, HTTPException, status, UploadFile, File, Depends, Form
+from pydantic import BaseModel, EmailStr, Field
 from models.users import User
 from core.auth import create_access_token, create_refresh_token
-from core.security import verify_password,hash_password
+from core.security import verify_password, hash_password
 from core.apiresponse import ApiResponse 
 from fastapi.responses import JSONResponse
-import os,shutil
+import os, shutil
 from utils.cloudinary import upload_on_cloudinary
 from services.user_services import *
+from core.apiresponse import ApiResponse
 
 user_router = APIRouter(prefix="/api/v1/users", tags=["Users"])
 # it is a standard practice to write routes like this 
@@ -59,46 +60,37 @@ async def login_user(login_data : LoginRequest,response:Response):
     }
 
 
-@user_router.post('/register/avatar')
-async def upload_avatar(avatar: UploadFile = File(...)):
-    if not avatar:
-        raise HTTPException(status_code=400, detail="File must be an image")
-    
-    # temp storage
-    temp_folder = "public/temp"
-    os.makedirs(temp_folder,exist_ok=True)
 
-    file_location = f"{temp_folder}/{avatar.filename}"
-    # Upload 
-    try:
-        with open(file_location,"wb+") as file_obj:
-            shutil.copyfileobj(avatar.file,file_obj)
-    except Exception as e:
-        raise HTTPException(status_code=500,detail="Could not upload File")
-    finally:
-        avatar.file.close()
-
-    cloudinary_response = upload_on_cloudinary(file_location)
-
-    if not cloudinary_response:
-        raise HTTPException(status_code=500, detail="Error uploading file on cloudinary")
-
-    # 3. Return the secure URL provided by Cloudinary
-    return {
-        "message": "Avatar uploaded successfully!", 
-        "cloudinary_url": cloudinary_response.get("secure_url"),
-        "original_filename": avatar.filename
-    }
+class RegisterRequest(BaseModel):
+    username: str = Field(..., min_length=3, max_length=30)
+    email: EmailStr = Field(...)
+    full_name: str = Field(..., min_length=3)
+    password: str = Field(..., min_length=6)
 
 
-# @user_router.post('/register')
-# async def register_user(user: User):
-#     new_user = await register_user_service(user=user)
-#     return {
-#         "success" : True,
-#         "message" : "User Registered successfully",
-#         "data" : {
-#             "username" : new_user.username,
-#             "email" : new_user.email
-#         }
-#     }
+@user_router.post("/register")
+async def register_user(
+    username: str = Form(...),
+    email: EmailStr = Form(...),
+    full_name: str = Form(...),
+    password: str = Form(...),
+    avatar: UploadFile = File(...),
+):
+    new_user = await register_user_service(
+        username=username,
+        email=email,
+        full_name=full_name,
+        avatar=avatar,
+        password=password,
+    )
+
+    return ApiResponse(
+        status_code=201,
+        data={
+            "username": new_user.username,
+            "email": new_user.email,
+            "full_name": new_user.full_name,
+            "avatar": new_user.avatar,
+        },
+        message="User registered successfully",
+    )
